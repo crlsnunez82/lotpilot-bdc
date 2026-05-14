@@ -1,0 +1,13 @@
+This package has a corrected render.yaml.
+
+To upload:
+1. Open your GitHub repo.
+2. Delete the current files or create a new empty repo if GitHub keeps fighting the upload.
+3. Use Add file -> Upload files.
+4. Drag the CONTENTS of this folder, not the outer folder and not this zip.
+5. Commit changes.
+
+Important: render.yaml must appear as many indented lines, starting with:
+services:
+  - type: web
+    name: lotpilot-web
