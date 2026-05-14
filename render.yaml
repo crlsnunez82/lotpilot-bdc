@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: starter
     rootDir: .
-    buildCommand: npm ci && npm run check:env && npm run build
+    buildCommand: npm ci && npm run build
     preDeployCommand: npm run check:env && npm run prisma:deploy
     startCommand: npm run render:start
     healthCheckPath: /api/health/ready
@@ -25,6 +25,8 @@ services:
           name: lotpilot-redis
           property: connectionString
       - key: APP_URL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
         sync: false
       - key: CAPTURE_API_TOKEN
         sync: false
@@ -54,7 +56,7 @@ services:
     runtime: node
     plan: starter
     rootDir: .
-    buildCommand: npm ci && npm run check:env && npm run prisma:generate
+    buildCommand: npm ci && npm run prisma:generate
     preDeployCommand: npm run check:env && npm run prisma:deploy
     startCommand: npm run render:worker
     autoDeploy: true
@@ -76,8 +78,73 @@ services:
           type: web
           name: lotpilot-web
           envVarKey: APP_URL
+      - key: SEED_ADMIN_PASSWORD
+        fromService:
+          type: web
+          name: lotpilot-web
+          envVarKey: SEED_ADMIN_PASSWORD
       - key: WORKFLOW_WORKER_CONCURRENCY
         value: "5"
+      - key: CAPTURE_API_TOKEN
+        fromService:
+          type: web
+          name: lotpilot-web
+          envVarKey: CAPTURE_API_TOKEN
+      - key: EMAIL_INBOUND_TOKEN
+        fromService:
+          type: web
+          name: lotpilot-web
+          envVarKey: EMAIL_INBOUND_TOKEN
+      - key: TWILIO_ACCOUNT_SID
+        fromService:
+          type: web
+          name: lotpilot-web
+          envVarKey: TWILIO_ACCOUNT_SID
+      - key: TWILIO_AUTH_TOKEN
+        fromService:
+          type: web
+          name: lotpilot-web
+          envVarKey: TWILIO_AUTH_TOKEN
+      - key: TWILIO_PHONE_NUMBER
+        fromService:
+          type: web
+          name: lotpilot-web
+          envVarKey: TWILIO_PHONE_NUMBER
+      - key: OPENAI_API_KEY
+        fromService:
+          type: web
+          name: lotpilot-web
+          envVarKey: OPENAI_API_KEY
+      - key: SMTP_HOST
+        fromService:
+          type: web
+          name: lotpilot-web
+          envVarKey: SMTP_HOST
+      - key: SMTP_USER
+        fromService:
+          type: web
+          name: lotpilot-web
+          envVarKey: SMTP_USER
+      - key: SMTP_PASS
+        fromService:
+          type: web
+          name: lotpilot-web
+          envVarKey: SMTP_PASS
+      - key: EMAIL_FROM_ADDRESS
+        fromService:
+          type: web
+          name: lotpilot-web
+          envVarKey: EMAIL_FROM_ADDRESS
+      - key: EMAIL_REPLY_TO_ADDRESS
+        fromService:
+          type: web
+          name: lotpilot-web
+          envVarKey: EMAIL_REPLY_TO_ADDRESS
+
+  - type: keyvalue
+    name: lotpilot-redis
+    plan: starter
+    ipAllowList: []
 
 envVarGroups:
   - name: lotpilot-shared
@@ -116,13 +183,8 @@ envVarGroups:
         value: SUGGEST_ONLY
       - key: SEED_ADMIN_EMAIL
         value: admin@lotpilot.local
-      - key: SEED_ADMIN_PASSWORD
-        value: change-me-now
 
 databases:
   - name: lotpilot-postgres
     databaseName: lotpilot
     plan: basic-1gb
-
-  - name: lotpilot-redis
-    plan: starter

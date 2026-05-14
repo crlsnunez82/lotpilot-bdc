@@ -24,7 +24,7 @@
     "test:ci": "npm run prisma:generate && node ./node_modules/tsx/dist/cli.mjs --test tests/**/*.test.ts",
     "start:standalone": "node .next/standalone/server.js",
     "render:build": "npm ci && npm run build",
-    "render:start": "npm run check:env && ./scripts/start-production.sh",
+    "render:start": "npm run check:env && npm run prisma:deploy && npm run start:standalone",
     "render:worker": "npm run worker:workflow",
     "prisma:deploy": "node ./node_modules/prisma/build/index.js migrate deploy",
     "prisma:status": "node ./node_modules/prisma/build/index.js migrate status",

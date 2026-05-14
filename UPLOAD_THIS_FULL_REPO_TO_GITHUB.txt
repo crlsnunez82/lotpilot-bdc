@@ -1,0 +1,28 @@
+# GitHub Upload / Render Deploy Notes
+
+This package is the full LotPilot repo with the Render Blueprint corrected.
+
+Important fixes in this package:
+- `render.yaml` is multi-line YAML and starts with:
+  services:
+    - type: web
+      name: lotpilot-web
+      runtime: node
+- Render Key Value / Redis is defined as a `services` entry with `type: keyvalue`, not under `databases`.
+- `REDIS_URL` references the Key Value service by `fromService`.
+- `SEED_ADMIN_PASSWORD` is `sync: false`, so Render prompts for it instead of committing a default password to GitHub.
+- `render:start` no longer depends on executing `./scripts/start-production.sh`, avoiding GitHub web-upload executable-bit problems.
+
+Upload:
+1. Unzip this file.
+2. Open the unzipped folder until you see `package.json`, `render.yaml`, `app/`, `prisma/`, `lib/`, and `scripts/`.
+3. Upload those contents to GitHub.
+4. Confirm this raw URL starts with `services:` on its own line:
+   https://raw.githubusercontent.com/crlsnunez82/lotpilot-bdc/main/render.yaml
+
+Render:
+- Use Blueprint deploy from the repo after the raw render.yaml is correct.
+- When prompted, set:
+  - APP_URL
+  - SEED_ADMIN_PASSWORD
+  - provider secrets if not staying in dev mode
