@@ -1,0 +1,15 @@
+I fixed render.yaml in this package.
+
+To update GitHub:
+1. Unzip this package.
+2. Open your GitHub repo: https://github.com/crlsnunez82/lotpilot-bdc
+3. Click Add file -> Upload files.
+4. Drag the FILES AND FOLDERS from inside the unzipped lotpilot-bdc-main folder into GitHub.
+5. Commit changes.
+
+Important:
+- Upload the contents of the folder, not this zip file.
+- The fixed render.yaml should display as many indented lines, starting:
+  services:
+    - type: web
+      name: lotpilot-web
