@@ -6,7 +6,7 @@ services:
     rootDir: .
     buildCommand: npm ci && npm run check:env && npm run build
     preDeployCommand: npm run check:env && npm run prisma:deploy
-    startCommand: npm run check:env && npm run start:standalone
+    startCommand: npm run render:start
     healthCheckPath: /api/health/ready
     autoDeploy: true
     envVars:
@@ -14,7 +14,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: "10000"
       - key: DATABASE_URL
         fromDatabase:
           name: lotpilot-postgres
@@ -56,7 +56,7 @@ services:
     rootDir: .
     buildCommand: npm ci && npm run check:env && npm run prisma:generate
     preDeployCommand: npm run check:env && npm run prisma:deploy
-    startCommand: npm run check:env && npm run worker:workflow
+    startCommand: npm run render:worker
     autoDeploy: true
     envVars:
       - fromGroup: lotpilot-shared
@@ -173,6 +173,7 @@ envVarGroups:
         value: admin@lotpilot.local
       - key: SEED_ADMIN_PASSWORD
         value: change-me-now
+
 databases:
   - name: lotpilot-postgres
     databaseName: lotpilot
