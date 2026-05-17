@@ -1,0 +1,761 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SourceSystem {
+  VINSOLUTIONS
+  AUTOMOTIVE_MASTERMIND
+  AFFINITIV
+  MANUAL
+  OTHER
+}
+
+enum LeadStage {
+  NEW
+  NEEDS_APPOINTMENT_ASK
+  TENTATIVE
+  CONFIRMED
+  ARRIVING_TODAY
+  MISSED_RESCUE
+  SHOWN
+  SOLD
+  LOST
+}
+
+enum OwnershipState {
+  AI_OWNED
+  REP_OWNED
+  DESK_SUPPORT
+  MANAGER_NOW
+}
+
+enum LeadStatus {
+  ACTIVE
+  PARKED
+  CLOSED
+}
+
+enum ConversationChannel {
+  SMS
+  EMAIL
+  CALL
+  INTERNAL
+  OTHER
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+  INTERNAL
+}
+
+enum MessageStatus {
+  DRAFT
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  RECEIVED
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELED
+}
+
+enum CaptureAction {
+  CREATED
+  UPDATED
+  MERGED
+  NOOP
+}
+
+enum DedupeStrategy {
+  SOURCE_RECORD_ID
+  PHONE
+  EMAIL
+  SAFE_FALLBACK
+  NONE
+}
+
+enum ReplyClassification {
+  POSITIVE_INTEREST
+  APPOINTMENT_READY
+  NEEDS_NUMBERS
+  TRADE_QUESTION
+  PAYMENT_OBJECTION
+  NOT_INTERESTED
+  STOP
+  NEEDS_HUMAN
+  UNKNOWN
+}
+
+enum AIDraftIntent {
+  FIRST_RESPONSE
+  FOLLOW_UP
+  APPOINTMENT_ASK
+  FIRM_UP_APPOINTMENT
+  CONFIRM_APPOINTMENT
+  ARRIVING_TODAY_CHECK
+  MISSED_APPOINTMENT_RESCUE
+  REACTIVATION
+}
+
+enum AIDecisionUrgency {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum AutomationStatus {
+  ACTIVE
+  PAUSED
+  STOPPED
+  HANDOFF
+}
+
+enum WorkflowMode {
+  NEW_LEAD
+  APPOINTMENT_ACTIVE
+  SERVICE_WHILE_HERE
+  SERVICE_APPOINTMENT_FIRST
+  MINING_REACTIVATION
+  MISSED_RESCUE
+  HUMAN_HANDOFF
+}
+
+
+enum ProspectListType {
+  HIGH_APR
+  HIGH_MILEAGE_LEASE
+  LEASE_MATURITY
+  SERVICE_APPRAISAL
+  PAYMENT_PAIN
+  MISSED_RESCUES
+  HOT_REPLIES
+  CUSTOM
+}
+
+
+enum LanguageCode {
+  EN
+  ES
+}
+
+enum AgentAutomationMode {
+  OFF
+  SUGGEST_ONLY
+  MANUAL_SEND
+  SEMI_AUTO
+}
+
+enum AutoResponseMode {
+  OFF
+  SUGGEST_ONLY
+  MANUAL_SEND
+  SEMI_AUTO
+  SAFE_AUTO
+}
+
+enum AutoResponseStatus {
+  PENDING_REVIEW
+  ELIGIBLE
+  DEFERRED
+  AUTO_RESPONDED
+  ESCALATED
+  BLOCKED
+}
+
+enum PersonalizationSignalType {
+  DRAFT_SENT_AS_IS
+  DRAFT_EDITED_BEFORE_SEND
+  DRAFT_IGNORED
+  MANUAL_MESSAGE_REPLACED_AI
+  COMMAND_USED
+  WORKFLOW_TOGGLE_CHANGED
+  HANDOFF_USED
+  ESCALATION_USED
+  LANGUAGE_OVERRIDE
+}
+
+
+enum WorkflowJobType {
+  FOLLOW_UP_DUE
+  APPOINTMENT_FIRM_UP
+  CONFIRMATION_REMINDER
+  ARRIVING_TODAY_CHECK
+  MISSED_APPOINTMENT_RESCUE
+  REP_ALERT_TASK
+  SERVICE_DRIVE_ACTION
+  MINING_REACTIVATION
+}
+
+enum WorkflowJobStatus {
+  SCHEDULED
+  RUNNING
+  COMPLETED
+  SKIPPED
+  FAILED
+  CANCELED
+}
+
+enum TaskType {
+  GENERAL
+  FOLLOW_UP
+  HOT_HANDOFF
+  URGENT_REPLY
+  APPOINTMENT_REVIEW
+  RESCUE
+  SERVICE_OPPORTUNITY
+  REACTIVATION
+  DESK_SUPPORT
+  CALL_REVIEW
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  name              String?
+  passwordHash      String?
+  role              String             @default("admin")
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  ownedLeads        Lead[]             @relation("LeadOwner")
+  createdTasks      Task[]             @relation("TaskCreator")
+  assignedTasks     Task[]             @relation("TaskAssignee")
+  decisions         AgentDecision[]
+  appointments      Appointment[]      @relation("AppointmentOwner")
+  createdAgentCommands AgentCommand[]  @relation("AgentCommandActor")
+  authAuditEvents   AuthAuditEvent[]
+  loginThrottleKeys LoginThrottle[]
+}
+
+
+model AuthAuditEvent {
+  id          String   @id @default(cuid())
+  userId       String?
+  email        String?
+  action       String
+  success      Boolean  @default(false)
+  ipAddress    String?
+  userAgent    String?
+  detail       String?
+  createdAt    DateTime @default(now())
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([email, createdAt])
+  @@index([action, createdAt])
+}
+
+model LoginThrottle {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  scope          String
+  email          String?
+  ipAddress      String?
+  attemptCount   Int      @default(0)
+  windowStartedAt DateTime @default(now())
+  blockedUntil   DateTime?
+  lastAttemptAt  DateTime?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([scope, email])
+  @@index([scope, ipAddress])
+  @@index([blockedUntil])
+}
+
+model Person {
+  id               String           @id @default(cuid())
+  firstName        String
+  lastName         String
+  fullName         String
+  email            String?
+  emailNormalized  String?
+  phone            String?
+  phoneNormalized  String?
+  city             String?
+  state            String?
+  postalCode       String?
+  notes            String?
+  preferredLanguage LanguageCode?
+  detectedLanguage  LanguageCode?
+  languageConfidence Float?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  lead             Lead?
+  conversations    Conversation[]
+  appointments     Appointment[]
+  tasks            Task[]
+  leadSources      LeadSource[]
+  captureAudits    CaptureAudit[]
+
+  @@index([emailNormalized])
+  @@index([phoneNormalized])
+  @@index([fullName, postalCode])
+}
+
+model Lead {
+  id               String            @id @default(cuid())
+  externalId       String?
+  sourceSystem     SourceSystem      @default(MANUAL)
+  sourceName       String?
+  stage            LeadStage         @default(NEW)
+  ownershipState   OwnershipState    @default(AI_OWNED)
+  status           LeadStatus        @default(ACTIVE)
+  vehicleInterest  String?
+  lastContactAt    DateTime?
+  nextActionAt     DateTime?
+  notes                 String?
+  preferredLanguage     LanguageCode?
+  workflowMode          WorkflowMode      @default(NEW_LEAD)
+  workflowModeReason    String?
+  automationStatus      AutomationStatus  @default(ACTIVE)
+  automationPausedAt    DateTime?
+  automationPauseReason String?
+  nextFollowUpAt        DateTime?
+  automationLastRunAt   DateTime?
+  lastAutoResponseAt    DateTime?
+  callPriorityScore     Int               @default(0)
+  callPriorityReason    String?
+  lastCallGuidanceAt    DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  personId         String            @unique
+  ownerUserId      String?
+  person           Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
+  owner            User?             @relation("LeadOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  conversations    Conversation[]
+  appointments     Appointment[]
+  tasks            Task[]
+  decisions        AgentDecision[]
+  feedbackEvents   AgentFeedbackEvent[]
+  leadSources      LeadSource[]
+  captureAudits    CaptureAudit[]
+  workflowJobLogs  WorkflowJobLog[]
+  agentCommands    AgentCommand[]
+  autoResponseAudits AutoResponseAudit[]
+
+  @@index([sourceSystem, stage, status])
+  @@index([automationStatus, nextFollowUpAt])
+  @@index([callPriorityScore, updatedAt])
+  @@index([ownerUserId])
+}
+
+model LeadSource {
+  id                  String        @id @default(cuid())
+  leadId              String
+  personId            String
+  sourceSystem        SourceSystem
+  sourceName          String?
+  sourceRecordId      String?
+  sourceCustomerId    String?
+  sourceUrl           String?
+  externalUpdatedAt   DateTime?
+  rawPayload          Json?
+  normalizedPayload   Json?
+  firstCapturedAt     DateTime      @default(now())
+  lastCapturedAt      DateTime      @default(now())
+  captureCount        Int           @default(1)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  lead                Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  person              Person        @relation(fields: [personId], references: [id], onDelete: Cascade)
+  captureAudits       CaptureAudit[]
+
+  @@unique([sourceSystem, sourceRecordId])
+  @@index([leadId, sourceSystem])
+  @@index([personId, sourceSystem])
+}
+
+
+
+model AgentProfile {
+  id                             String               @id @default(cuid())
+  agentName                      String               @default("LotPilot")
+  assistantLabel                 String               @default("BDC Agent")
+  agentPersona                   String?              @default("Helpful, concise dealership BDC assistant")
+  defaultLanguage                LanguageCode         @default(EN)
+  supportedLanguages             LanguageCode[]       @default([EN, ES])
+  workDays                       Int[]                @default([1, 2, 3, 4, 5, 6])
+  workHoursStart                 String               @default("08:30")
+  workHoursEnd                   String               @default("18:00")
+  storeHoursStart                String               @default("08:00")
+  storeHoursEnd                  String               @default("20:00")
+  contactWindowStart             String               @default("09:00")
+  contactWindowEnd               String               @default("19:00")
+  timezone                       String               @default("America/New_York")
+  automationMode                 AgentAutomationMode  @default(SUGGEST_ONLY)
+  autoResponseMode               AutoResponseMode     @default(SUGGEST_ONLY)
+  allowNewLeads                  Boolean              @default(true)
+  allowAppointments              Boolean              @default(true)
+  allowMissedRescue              Boolean              @default(true)
+  allowService                   Boolean              @default(true)
+  allowMining                    Boolean              @default(true)
+  allowSms                       Boolean              @default(true)
+  allowEmail                     Boolean              @default(true)
+  allowSafeAutoSms               Boolean              @default(false)
+  allowSafeAutoEmail             Boolean              @default(false)
+  allowSafeAutoNewLeads          Boolean              @default(false)
+  allowSafeAutoAppointments      Boolean              @default(false)
+  allowSafeAutoMissedRescue      Boolean              @default(false)
+  allowSafeAutoService           Boolean              @default(false)
+  allowSafeAutoMining            Boolean              @default(false)
+  createdAt                      DateTime             @default(now())
+  updatedAt                      DateTime             @updatedAt
+  commands                       AgentCommand[]
+  autoResponseAudits             AutoResponseAudit[]
+  savedFilters                   SmartFilter[]
+  learningProfile                AgentLearningProfile?
+  feedbackEvents                 AgentFeedbackEvent[]
+}
+
+
+model SmartFilter {
+  id              String           @id @default(cuid())
+  agentProfileId  String
+  key             String           @unique
+  name            String
+  description     String?
+  commandText     String
+  listType        ProspectListType
+  sourceSystems   SourceSystem[]
+  workflowModes   WorkflowMode[]
+  isPinned        Boolean          @default(true)
+  sortOrder       Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  agentProfile    AgentProfile     @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+
+  @@index([agentProfileId, sortOrder])
+  @@index([listType, sortOrder])
+}
+
+model AgentCommand {
+  id                String       @id @default(cuid())
+  agentProfileId    String
+  leadId            String?
+  actorUserId       String?
+  commandText       String
+  commandKey        String
+  resultSummary     Json?
+  createdAt         DateTime     @default(now())
+  feedbackEvents     AgentFeedbackEvent[]
+  agentProfile      AgentProfile @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+  lead              Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  actor             User?        @relation("AgentCommandActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([commandKey, createdAt])
+  @@index([leadId, createdAt])
+}
+
+
+model WorkflowJobLog {
+  id             String            @id @default(cuid())
+  dedupeKey      String?           @unique
+  queueName      String
+  jobId          String?
+  leadId         String?
+  appointmentId  String?
+  conversationId String?
+  taskId         String?
+  jobType        WorkflowJobType
+  status         WorkflowJobStatus @default(SCHEDULED)
+  scheduledFor   DateTime?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  attempt        Int               @default(0)
+  lastError      String?
+  payload        Json?
+  result         Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  lead           Lead?             @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  appointment    Appointment?      @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  conversation   Conversation?     @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  task           Task?             @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([leadId, status, scheduledFor])
+  @@index([jobType, status, scheduledFor])
+  @@index([conversationId])
+  @@index([appointmentId])
+}
+
+model CaptureAudit {
+  id                  String          @id @default(cuid())
+  leadId              String?
+  personId            String?
+  leadSourceId        String?
+  sourceSystem        SourceSystem
+  sourceName          String?
+  sourceRecordId      String?
+  action              CaptureAction
+  dedupeStrategy      DedupeStrategy  @default(NONE)
+  requestId           String?
+  payload             Json?
+  normalizedPayload   Json?
+  resultSummary       Json?
+  createdAt           DateTime        @default(now())
+  lead                Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  person              Person?         @relation(fields: [personId], references: [id], onDelete: SetNull)
+  leadSource          LeadSource?     @relation(fields: [leadSourceId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([leadId, createdAt])
+  @@index([sourceSystem, sourceRecordId])
+}
+
+model Conversation {
+  id                      String               @id @default(cuid())
+  leadId                  String?
+  personId                String
+  channel                 ConversationChannel
+  provider                String?
+  providerThreadId        String?
+  threadKey               String?
+  subject                 String?
+  subjectNormalized       String?
+  isOpen                  Boolean              @default(true)
+  contactPhone            String?
+  contactPhoneNormalized  String?
+  providerPhone           String?
+  providerPhoneNormalized String?
+  contactEmail            String?
+  contactEmailNormalized  String?
+  providerEmail           String?
+  unreadCount             Int                  @default(0)
+  lastMessageAt           DateTime?
+  lastMessagePreview      String?
+  autoResponseStatus      AutoResponseStatus   @default(PENDING_REVIEW)
+  autoResponseEligible    Boolean              @default(false)
+  autoResponseReason      String?
+  autoResponseLastEvaluatedAt DateTime?
+  lastAutoResponseAt      DateTime?
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  lead                    Lead?                @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  person                  Person               @relation(fields: [personId], references: [id], onDelete: Cascade)
+  messages                Message[]
+  decisions               AgentDecision[]
+  workflowJobLogs         WorkflowJobLog[]
+  feedbackEvents          AgentFeedbackEvent[]
+  autoResponseAudits      AutoResponseAudit[]
+
+  @@index([leadId, channel])
+  @@index([contactPhoneNormalized, channel])
+  @@index([contactEmailNormalized, channel])
+  @@index([providerThreadId, channel])
+  @@index([threadKey, channel])
+  @@index([updatedAt])
+}
+
+model Message {
+  id               String             @id @default(cuid())
+  conversationId   String
+  direction        MessageDirection
+  status           MessageStatus      @default(DRAFT)
+  subject          String?
+  body             String
+  externalId       String?
+  provider         String?
+  providerStatus   String?
+  fromPhone        String?
+  toPhone          String?
+  fromEmail        String?
+  toEmail          String?
+  replyToEmail     String?
+  inReplyTo        String?
+  referenceIds     String?
+  language         LanguageCode?
+  draftSource      String?
+  autoGenerated    Boolean            @default(false)
+  errorCode        String?
+  errorMessage     String?
+  rawPayload       Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  sentAt           DateTime?
+  receivedAt       DateTime?
+  conversation     Conversation       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  decisions        AgentDecision[]
+  feedbackEvents   AgentFeedbackEvent[]
+  inboundAutoResponseAudits AutoResponseAudit[] @relation("InboundMessageAudit")
+  responseAutoResponseAudits AutoResponseAudit[] @relation("ResponseMessageAudit")
+
+  @@index([conversationId, createdAt])
+  @@index([externalId])
+  @@index([inReplyTo])
+  @@index([status, createdAt])
+}
+
+model Appointment {
+  id               String             @id @default(cuid())
+  leadId           String?
+  personId         String
+  ownerUserId      String?
+  startsAt         DateTime
+  endsAt           DateTime?
+  status           String             @default("scheduled")
+  location         String?
+  notes            String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  lead             Lead?              @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  person           Person             @relation(fields: [personId], references: [id], onDelete: Cascade)
+  owner            User?              @relation("AppointmentOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  workflowJobLogs  WorkflowJobLog[]
+}
+
+model Task {
+  id               String             @id @default(cuid())
+  leadId           String?
+  personId         String?
+  title            String
+  description      String?
+  type             TaskType           @default(GENERAL)
+  priority         String             @default("normal")
+  source           String?
+  status           TaskStatus         @default(OPEN)
+  dueAt            DateTime?
+  completedAt      DateTime?
+  completionNote   String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  createdByUserId  String?
+  assignedUserId   String?
+  lead             Lead?              @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  person           Person?            @relation(fields: [personId], references: [id], onDelete: SetNull)
+  createdBy        User?              @relation("TaskCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  assignedTo       User?              @relation("TaskAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  workflowJobLogs  WorkflowJobLog[]
+
+  @@index([status, dueAt])
+  @@index([leadId, type, status])
+}
+
+model AgentDecision {
+  id                             String                 @id @default(cuid())
+  leadId                         String
+  conversationId                 String?
+  messageId                      String?
+  decidedByUserId                String?
+  decisionType                   String
+  rationale                      String?
+  payload                        Json?
+  provider                       String?
+  classification                 ReplyClassification?
+  confidenceScore                Float?
+  draftIntent                    AIDraftIntent?
+  appointmentStageRecommendation LeadStage?
+  ownershipRecommendation        OwnershipState?
+  urgency                        AIDecisionUrgency?
+  channelRecommendation          ConversationChannel?
+  suggestedDelayMinutes          Int?
+  handoffRecommended             Boolean               @default(false)
+  adaptedFromLearning            Boolean               @default(false)
+  personalizationSummary         String?
+  autoResponseEligible           Boolean?
+  autoResponseReason             String?
+  escalationReason               String?
+  createdAt                      DateTime              @default(now())
+  updatedAt                      DateTime              @updatedAt
+  lead                           Lead                  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  conversation                   Conversation?         @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  message                        Message?              @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  decidedBy                      User?                 @relation(fields: [decidedByUserId], references: [id], onDelete: SetNull)
+  feedbackEvents                 AgentFeedbackEvent[]
+  autoResponseAudits             AutoResponseAudit[]
+
+  @@index([leadId, decisionType, createdAt])
+  @@index([conversationId, createdAt])
+  @@index([messageId])
+}
+
+
+model AgentLearningProfile {
+  id                         String                 @id @default(cuid())
+  agentProfileId             String                 @unique
+  tonePreference             String                 @default("friendly_direct")
+  directnessScore            Float                  @default(0.55)
+  brevityScore               Float                  @default(0.55)
+  spanishPreferenceScore     Float                  @default(0.25)
+  appointmentAskStyle        String                 @default("direct")
+  serviceMessageStyle        String                 @default("consultative")
+  miningMessageStyle         String                 @default("reactivation_light")
+  commandPreferenceSummary   Json?
+  workflowPreferenceSummary  Json?
+  adaptationSummary          String?
+  learningStrength           Float                  @default(0)
+  lastLearnedAt              DateTime?
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  agentProfile               AgentProfile           @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+
+  @@index([learningStrength, updatedAt])
+}
+
+model AgentFeedbackEvent {
+  id               String                     @id @default(cuid())
+  agentProfileId   String
+  signalType       PersonalizationSignalType
+  leadId           String?
+  conversationId   String?
+  messageId        String?
+  decisionId       String?
+  commandId        String?
+  metadata         Json?
+  createdAt        DateTime                   @default(now())
+  agentProfile     AgentProfile               @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+  lead             Lead?                      @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  conversation     Conversation?              @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  message          Message?                   @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  decision         AgentDecision?             @relation(fields: [decisionId], references: [id], onDelete: SetNull)
+  command          AgentCommand?              @relation(fields: [commandId], references: [id], onDelete: SetNull)
+
+  @@index([signalType, createdAt])
+  @@index([agentProfileId, createdAt])
+  @@index([leadId, createdAt])
+}
+
+
+model AutoResponseAudit {
+  id                String             @id @default(cuid())
+  agentProfileId    String
+  leadId            String
+  conversationId    String
+  inboundMessageId  String?
+  responseMessageId String?
+  decisionId        String?
+  channel           ConversationChannel
+  mode              AutoResponseMode
+  status            AutoResponseStatus
+  eligible          Boolean           @default(false)
+  reason            String?
+  guardrailReason   String?
+  executed          Boolean           @default(false)
+  deferredUntil     DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  metadata          Json?
+  agentProfile      AgentProfile      @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+  lead              Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  conversation      Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  inboundMessage    Message?          @relation("InboundMessageAudit", fields: [inboundMessageId], references: [id], onDelete: SetNull)
+  responseMessage   Message?          @relation("ResponseMessageAudit", fields: [responseMessageId], references: [id], onDelete: SetNull)
+  decision          AgentDecision?    @relation(fields: [decisionId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+  @@index([leadId, createdAt])
+  @@index([status, createdAt])
+}
