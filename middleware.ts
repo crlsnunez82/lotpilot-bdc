@@ -68,5 +68,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // session-token.ts uses node:crypto + Buffer, which require the Node.js runtime.
+  // Without this, middleware runs on the Edge runtime and crashes at request time.
+  runtime: "nodejs",
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
 };
